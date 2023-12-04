@@ -46,4 +46,5 @@ def init_session_state(state_path=USER_CONFIG_PATH):
         st.session_state.record_manager = SQLRecordManager('chroma_index', db_url=INDEX_DB_URL)
         st.session_state.record_manager.create_schema()
 
+
         
