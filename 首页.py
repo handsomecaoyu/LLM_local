@@ -11,14 +11,15 @@ from langchain.chains.llm import LLMChain
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chains.conversational_retrieval.prompts import CONDENSE_QUESTION_PROMPT, QA_PROMPT
 from langchain.chains.question_answering import load_qa_chain
+from langchain.callbacks import get_openai_callback
 
 
-class MyCallbackHandler(BaseCallbackHandler):
+
+class StreamingResponseCallbackHandler(BaseCallbackHandler):
     def __init__(self, res_placeholder):
-        super(MyCallbackHandler, self).__init__()
+        super(StreamingResponseCallbackHandler, self).__init__()
         self.res_placeholder = res_placeholder
         self.res = ''
-
 
     def on_llm_new_token(self, token, **kwargs) -> None:
         # print every token on a new line
@@ -54,16 +55,21 @@ def main():
         # 展示回答的信息
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
-
-        llm = OpenAI(temperature=0)
+        llm = OpenAI(temperature=0, model='gpt-3.5-turbo-instruct')
         # 关键在于要重写这个callback
-        streaming_llm = OpenAI(streaming=True, callbacks=[MyCallbackHandler(message_placeholder)], temperature=0)
+        streaming_llm = OpenAI(streaming=True,
+                               callbacks=[StreamingResponseCallbackHandler(message_placeholder)],
+                               temperature=0,
+                               model='gpt-3.5-turbo-instruct')
+
 
         question_generator = LLMChain(llm=llm, prompt=CONDENSE_QUESTION_PROMPT)
         doc_chain = load_qa_chain(streaming_llm, chain_type="stuff", prompt=QA_PROMPT)
 
         qa = ConversationalRetrievalChain(
-            retriever=st.session_state.vector_db.as_retriever(), combine_docs_chain=doc_chain, question_generator=question_generator)
+            retriever=st.session_state.vector_db.as_retriever(),
+            combine_docs_chain=doc_chain,
+            question_generator=question_generator)
 
         result = qa({"question": prompt, "chat_history": chat_history})
         chat_history.append((prompt, result['answer']))
