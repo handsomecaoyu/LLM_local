@@ -7,16 +7,21 @@ from langchain.indexes import SQLRecordManager, index
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
-def save_to_vector_db(file_paths):
+def batch_save_to_vector_db(file_paths):
     docs = []
     loader_dict = {
         'md': UnstructuredMarkdownLoader,
         'pdf': PyMuPDFLoader,
         'txt': UnstructuredFileLoader
     }
+    # 加载文件
+    error_files = []
     for file_path in file_paths:
-        loader = loader_dict[file_path.split('.')[-1]](file_path)
-        docs.extend(loader.load())
+        try:
+            loader = loader_dict[file_path.split('.')[-1]](file_path)
+            docs.extend(loader.load())
+        except:
+            error_files.append(file_path)
 
     # 切分文档
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=150)
@@ -30,6 +35,14 @@ def save_to_vector_db(file_paths):
         source_id_key="source",
     )
     return result
+
+
+def save_to_vector_db(file_paths, batch_size=20):
+    if len(file_paths) > batch_size:
+        for i in range(0, len(file_paths), batch_size):
+            batch_save_to_vector_db(file_paths[i:i + batch_size])
+    else:
+        batch_save_to_vector_db(file_paths)
 
 
 def main():
@@ -79,10 +92,9 @@ def main():
                 file_paths.extend(find_all_files(knowledge_dir, target_file_types))
             # 将目录下的文件存入向量数据库
             if 'vector_db' in st.session_state:
-                message = st.empty()
-                message.text("正在构建本地知识库，可能会需要一点时间...")
+                st.write('一共有{}个文件需要处理'.format(len(file_paths)))
                 save_db_res = save_to_vector_db(file_paths)
-                message.text("增加了{}个chunks, 更新了{}个chunks, 跳过了{}个chunks, 删除了{}个chunks".format(
+                st.write("增加了{}个chunks, 更新了{}个chunks, 跳过了{}个chunks, 删除了{}个chunks".format(
                     save_db_res['num_added'],
                     save_db_res['num_updated'],
                     save_db_res['num_skipped'],
