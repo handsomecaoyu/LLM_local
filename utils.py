@@ -4,18 +4,18 @@ import streamlit as st
 from configs.config import USER_CONFIG_PATH, VECTOR_DB_PATH, INDEX_DB_URL
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
-from langchain.indexes import SQLRecordManager, index
+from langchain.indexes import SQLRecordManager
 from langchain_core.callbacks import BaseCallbackHandler
 
 
 def save_data(data, file_path):
-    with open(file_path, 'w') as f:
+    with open(file_path, "w") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
 # 从 JSON 文件加载数据
 def load_data(data_path):
-    with open(data_path, 'r') as f:
+    with open(data_path, "r") as f:
         data = json.load(f)
     return data
 
@@ -25,7 +25,7 @@ def find_all_files(path, target_file_types):
     if os.path.exists(path):
         for root, dirs, files in os.walk(path):
             for file in files:
-                if file.split('.')[-1] in target_file_types:
+                if file.split(".")[-1] in target_file_types:
                     res.append(os.path.join(root, file))
     return res
 
@@ -44,26 +44,27 @@ def init_session_state(state_path=USER_CONFIG_PATH):
             st.session_state[k] = st.session_state[k]
 
     # 配置向量数据库
-    if 'embedding_api_key' in st.session_state:
+    if "embedding_api_key" in st.session_state:
         embedding = OpenAIEmbeddings(openai_api_key=st.session_state.embedding_api_key)
-        if 'vector_db' not in st.session_state:
-            st.session_state.vector_db = Chroma(persist_directory=VECTOR_DB_PATH, embedding_function=embedding)
+        if "vector_db" not in st.session_state:
+            st.session_state.vector_db = Chroma(
+                persist_directory=VECTOR_DB_PATH, embedding_function=embedding
+            )
     # 配置index数据库
-    if 'record_manager' not in st.session_state:
-        st.session_state.record_manager = SQLRecordManager('chroma_index', db_url=INDEX_DB_URL)
+    if "record_manager" not in st.session_state:
+        st.session_state.record_manager = SQLRecordManager(
+            "chroma_index", db_url=INDEX_DB_URL
+        )
         st.session_state.record_manager.create_schema()
-
 
 
 class StreamingResponseCallbackHandler(BaseCallbackHandler):
     def __init__(self, res_placeholder):
         super(StreamingResponseCallbackHandler, self).__init__()
         self.res_placeholder = res_placeholder
-        self.res = ''
+        self.res = ""
 
     def on_llm_new_token(self, token, **kwargs) -> None:
         # print every token on a new line
         self.res += token
         self.res_placeholder.markdown(self.res)
-
-        
