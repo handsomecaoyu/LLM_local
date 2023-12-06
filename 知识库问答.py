@@ -46,6 +46,8 @@ def main():
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
 
+        # 下面注释的代码在一轮对话的时候是正常的,但是在多轮对话的时候,streaming会把重新生成的问题也输出出来,导致对话的内容很奇怪
+
         # llm = ChatOpenAI(
         #     openai_api_key=st.session_state.llm_api_key,
         #     temperature=0,
@@ -67,6 +69,7 @@ def main():
         #         "chat_history": st.session_state.knowledge_messages[1:],
         #     }
         # )
+
         llm = ChatOpenAI(temperature=0)
         streaming_llm = ChatOpenAI(
             streaming=True,
@@ -92,7 +95,6 @@ def main():
         qa_prompt = PromptTemplate(
             template=qa_prompt_template, input_variables=["context", "question"]
         )
-
         doc_chain = load_qa_chain(streaming_llm, chain_type="stuff", prompt=qa_prompt)
 
         qa = ConversationalRetrievalChain(
